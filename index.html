@@ -729,14 +729,15 @@
 
     <div class="row">
       <select id="pointCount">
+        <option value="2" selected>2 titik</option>
         <option value="5">5 titik</option>
-        <option value="10" selected>10 titik</option>
+        <option value="10">10 titik</option>
         <option value="15">15 titik</option>
         <option value="20">20 titik</option>
       </select>
       <button class="btn btn-ghost" id="genTemplateBtn" type="button">Buat Template</button>
     </div>
-    <p class="hint">"Buat Template" mengganti <b>semua</b> titik dengan contoh baru (foto yang sudah diupload akan hilang, tinggal upload ulang). Pakai tombol <b>+ Tambah Titik</b> di bawah kalau cuma mau menambah tanpa reset.</p>
+    <p class="hint">"Buat Template" mengatur ulang jumlah kartu titik menjadi kosong sesuai pilihan di atas (isi foto yang sudah diupload akan hilang). Pakai tombol <b>+ Tambah Titik</b> di bawah kalau cuma mau menambah tanpa reset.</p>
 
     <label class="field-label">Ikon kendaraan / kegiatan</label>
     <select id="iconType">
@@ -750,7 +751,11 @@
     <div style="height:14px;"></div>
 
     <label class="field-label">Foto profil rider (avatar, opsional)</label>
-    <input type="url" id="avatarUrl" placeholder="https://... foto kamu (bulat kecil di ikon)">
+    <div class="pc-photo-row">
+      <label class="pc-upload-btn"><input type="file" id="avatarFile" accept="image/*" hidden><span>📷 Upload Foto Avatar</span></label>
+      <img class="pc-thumb" id="avatarThumb" alt="">
+      <button class="pc-photo-clear" id="avatarClearBtn" type="button" title="Hapus foto">✕</button>
+    </div>
 
     <div style="height:14px;"></div>
 
@@ -877,7 +882,9 @@
   var pointCountSel = document.getElementById('pointCount');
   var genTemplateBtn= document.getElementById('genTemplateBtn');
   var iconTypeSel   = document.getElementById('iconType');
-  var avatarUrlInput= document.getElementById('avatarUrl');
+  var avatarFileInput = document.getElementById('avatarFile');
+  var avatarThumb   = document.getElementById('avatarThumb');
+  var avatarClearBtn= document.getElementById('avatarClearBtn');
   var durationSlider= document.getElementById('durationSlider');
   var durationVal   = document.getElementById('durationVal');
   var tripHoursInput= document.getElementById('tripHours');
@@ -902,6 +909,27 @@
 
   var lastPoints = null; // titik terakhir yang berhasil dijalankan, dipakai tombol "Putar Ulang"
 
+  var avatarDataUrl = '';
+  avatarFileInput.addEventListener('change', function(){
+    var file = avatarFileInput.files && avatarFileInput.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e){
+      avatarDataUrl = e.target.result;
+      avatarThumb.src = avatarDataUrl;
+      avatarThumb.style.display = 'block';
+      avatarClearBtn.style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+  });
+  avatarClearBtn.addEventListener('click', function(){
+    avatarDataUrl = '';
+    avatarThumb.removeAttribute('src');
+    avatarThumb.style.display = 'none';
+    avatarClearBtn.style.display = 'none';
+    avatarFileInput.value = '';
+  });
+
   durationSlider.addEventListener('input', function(){
     durationVal.textContent = durationSlider.value + ' dtk';
   });
@@ -923,20 +951,7 @@
   });
   applyTitle(iconTypeSel.value); // set judul awal sesuai ikon default
 
-  // ---------------- TEMPLATE CONTOH ----------------
-  // Titik-titik nyata di jalur Borobudur - Mendut - Muntilan - Magelang (Jawa Tengah),
-  // dipilih karena memang berada di / dekat jalan raya asli sehingga aman untuk OSRM.
-  var REAL_ANCHORS = [
-    { lat:-7.6079, lng:110.2038, name:'Candi Borobudur' },
-    { lat:-7.6039, lng:110.2141, name:'Candi Pawon' },
-    { lat:-7.6027, lng:110.2225, name:'Candi Mendut' },
-    { lat:-7.5813, lng:110.2295, name:'Jl. Mendut - Muntilan' },
-    { lat:-7.5588, lng:110.2263, name:'Muntilan' },
-    { lat:-7.5142, lng:110.2233, name:'Jl. Muntilan - Magelang' },
-    { lat:-7.4830, lng:110.2170, name:'Mertoyudan' },
-    { lat:-7.4707, lng:110.2178, name:'Alun-alun Magelang' }
-  ];
-
+  // ---------------- KARTU TITIK ----------------
   function createPointCard(prefill){
     var wrap = document.createElement('div');
     wrap.className = 'point-card';
@@ -1010,15 +1025,7 @@
   function renderPointCards(n){
     pointCardsEl.innerHTML = '';
     for(var i=0;i<n;i++){
-      var anchor = REAL_ANCHORS[i % REAL_ANCHORS.length];
-      var round = Math.floor(i / REAL_ANCHORS.length);
-      // sedikit jitter kecil kalau n > jumlah anchor (supaya titik tidak dobel persis)
-      var jitter = round * 0.0006;
-      createPointCard({
-        lat: anchor.lat + jitter,
-        lng: anchor.lng + jitter,
-        name: anchor.name + (round > 0 ? ' (lanjutan)' : '')
-      });
+      createPointCard(null);
     }
   }
   genTemplateBtn.addEventListener('click', function(){
@@ -1027,7 +1034,7 @@
   addPointBtn.addEventListener('click', function(){
     createPointCard(null);
   });
-  renderPointCards(parseInt(pointCountSel.value, 10)); // isi awal saat load
+  renderPointCards(parseInt(pointCountSel.value, 10)); // isi awal saat load (kosong, 2 titik)
 
   // ---------------- BACA TITIK DARI KARTU ----------------
   function readPointsFromCards(){
@@ -1309,7 +1316,7 @@
       var totalKm = totalDistM / 1000;
       setStatus('Rute ditemukan (' + totalKm.toFixed(1) + ' km, ' + stops.length + ' checkpoint). Bersiap merekam!');
 
-      var icon = buildVehicleIcon(iconType, avatarUrlInput.value.trim());
+      var icon = buildVehicleIcon(iconType, avatarDataUrl);
       marker = L.marker(fullCoords[0], { icon: icon, zIndexOffset: 1000 }).addTo(map);
       trailLine.addLatLng(fullCoords[0]);
 
