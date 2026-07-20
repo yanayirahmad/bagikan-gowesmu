@@ -10,7 +10,7 @@ Web ini bikin **animasi video rute gowes/jalan-jalan** yang mengikuti jalan asli
 
 Di panel kiri, pilih ikon yang mau bergerak di peta: 🚴 Sepeda, 🚗 Mobil, 🏍️ Motor, 🚶 Jalan Kaki, atau 📍 Simbol Maps.
 
-*(Opsional)* Isi **foto profil rider** — foto kecil bulat yang nempel di ikon, pakai link foto (bukan upload).
+*(Opsional)* Isi **foto profil rider** — foto kecil bulat yang nempel di ikon.
 
 ---
 
